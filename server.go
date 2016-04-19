@@ -9,8 +9,11 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/russellchadwick/rpc/discovery"
 	"google.golang.org/grpc"
+	"net/http"
+	_ "net/http/pprof"
 )
 
 // Server provides an RPC server that registers itself with discovery and uses HTTP/2 transport
@@ -39,7 +42,14 @@ func (s *Server) Serve(name string, registrationFunc func(*grpc.Server)) error {
 		return err
 	}
 
-	s.grpcServer = grpc.NewServer()
+	grpc.EnableTracing = true
+	http.Handle("/metrics", prometheus.Handler())
+	err = http.Serve(listener, nil)
+	if err != nil {
+		log.WithField("error", err).Error("failed to serve http")
+		return err
+	}
+
 	registrationFunc(s.grpcServer)
 
 	err = registerWithDiscovery(name, *port)
@@ -59,7 +69,6 @@ func (s *Server) Serve(name string, registrationFunc func(*grpc.Server)) error {
 
 // Stop will end serving and remove itself from discovery
 func (s *Server) Stop() error {
-	s.grpcServer.Stop()
 	err := deregisterWithDiscovery(s.name)
 	if err != nil {
 		log.WithField("error", err).Error("failed to deregister with discovery")

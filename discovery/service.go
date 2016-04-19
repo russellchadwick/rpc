@@ -12,20 +12,20 @@ var (
 	usageCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Namespace: "pi",
 		Subsystem: "discovery",
-		Name:      "discovery_usage_total",
+		Name:      "usage_total",
 		Help:      "Number of times endpoints has been invoked.",
 	}, []string{"method"})
-	responseTimeHistogram = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+	responseTimeSummary = prometheus.NewSummaryVec(prometheus.SummaryOpts{
 		Namespace: "pi",
 		Subsystem: "discovery",
-		Name:      "discovery_response_time",
+		Name:      "response_time",
 		Help:      "Response time of endpoints.",
 	}, []string{"method"})
 )
 
 func init() {
 	prometheus.MustRegisterOrGet(usageCounter)
-	prometheus.MustRegisterOrGet(responseTimeHistogram)
+	prometheus.MustRegisterOrGet(responseTimeSummary)
 }
 
 // Node represents the address of an instance of a service
@@ -85,8 +85,8 @@ func (d *Discovery) GetLocalServices() ([]*Service, error) {
 		services = append(services, &service)
 	}
 
-	elapsed := time.Since(start)
-	responseTimeHistogram.WithLabelValues("GetLocalServices").Observe(float64(elapsed))
+	elapsed := float64(time.Since(start)) / float64(time.Microsecond)
+	responseTimeSummary.WithLabelValues("GetLocalServices").Observe(elapsed)
 
 	return services, nil
 }
@@ -116,8 +116,8 @@ func (d *Discovery) GetService(name string) ([]*Node, error) {
 		nodes[index] = &node
 	}
 
-	elapsed := time.Since(start)
-	responseTimeHistogram.WithLabelValues("GetService").Observe(float64(elapsed))
+	elapsed := float64(time.Since(start)) / float64(time.Microsecond)
+	responseTimeSummary.WithLabelValues("GetService").Observe(elapsed)
 
 	return nodes, nil
 }
@@ -136,8 +136,8 @@ func (d *Discovery) RegisterService(name string, port int) error {
 		return err
 	}
 
-	elapsed := time.Since(start)
-	responseTimeHistogram.WithLabelValues("RegisterService").Observe(float64(elapsed))
+	elapsed := float64(time.Since(start)) / float64(time.Microsecond)
+	responseTimeSummary.WithLabelValues("RegisterService").Observe(elapsed)
 
 	return nil
 }
@@ -153,8 +153,8 @@ func (d *Discovery) DeregisterService(name string) error {
 		return err
 	}
 
-	elapsed := time.Since(start)
-	responseTimeHistogram.WithLabelValues("DeregisterService").Observe(float64(elapsed))
+	elapsed := float64(time.Since(start)) / float64(time.Microsecond)
+	responseTimeSummary.WithLabelValues("DeregisterService").Observe(elapsed)
 
 	return nil
 }
