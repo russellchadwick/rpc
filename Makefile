@@ -8,7 +8,7 @@ all: format build test check
 
 .PHONY: format
 format: $(GOCC)
-	find . -iname '*.go' | grep -v '\./vendor' | xargs -n1 $(GOFMT) -w -s
+	find . -iname '*.go' | xargs -n1 $(GOFMT) -w -s
 
 .PHONY: build
 build:
@@ -20,4 +20,4 @@ test:
 
 .PHONY: check
 check:
-	gometalinter $(PKG) --concurrency=2 --deadline=60s --vendor
+	gometalinter $(PKG) --concurrency=2 --deadline=60s
