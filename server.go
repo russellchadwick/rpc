@@ -10,7 +10,6 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/russellchadwick/rpc/discovery"
 	"google.golang.org/grpc"
 	"net/http"
 	_ "net/http/pprof"
@@ -136,8 +135,8 @@ func deregisterWithDiscovery(name string) error {
 	return nil
 }
 
-func connectToDiscovery() (*discovery.Discovery, error) {
-	discovery, err := discovery.NewDiscovery()
+func connectToDiscovery() (*Discovery, error) {
+	discovery, err := NewDiscovery()
 	if err != nil {
 		log.Fatalf("failed to create discovery service: %v", err)
 		return nil, err

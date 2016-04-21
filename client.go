@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/russellchadwick/rpc/discovery"
 	"google.golang.org/grpc"
 )
 
@@ -15,7 +14,7 @@ type Client struct {
 
 // Dial takes the name of a service and figures out who to dial
 func (c *Client) Dial(name string) (*grpc.ClientConn, error) {
-	discovery, err := discovery.NewDiscovery()
+	discovery, err := NewDiscovery()
 	if err != nil {
 		log.Fatalf("failed to create discovery service: %v", err)
 		return nil, err

@@ -1,9 +1,9 @@
-package discovery_test
+package rpc_test
 
 import "testing"
 import "github.com/stretchr/testify/assert"
 
-import . "github.com/russellchadwick/rpc/discovery"
+import . "github.com/russellchadwick/rpc"
 
 func TestGetService(t *testing.T) {
 	discovery, err := NewDiscovery()
