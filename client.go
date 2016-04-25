@@ -6,6 +6,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"google.golang.org/grpc"
+	"net"
 )
 
 // Client provides an RPC client that will find services by name
@@ -19,18 +20,21 @@ func (c *Client) Dial(name string) (*grpc.ClientConn, error) {
 		log.Fatalf("failed to create discovery service: %v", err)
 		return nil, err
 	}
+
 	nodes, err := discovery.GetService(name)
 	if err != nil {
 		log.Fatalf("failed to get service %s with discovery service: %v", name, err)
 		return nil, err
 	}
-	size := len(nodes)
-	log.WithField("size", size).Infoln("nodes")
+
 	randomInt := rand.Intn(len(nodes))
-	log.WithField("number", randomInt).Infoln("picked a random index")
 	node := nodes[randomInt]
-	log.WithField("address", node.Address).WithField("port", node.Port).Infoln("randomly chose node")
-	address := node.Address + ":" + strconv.Itoa(node.Port)
+	address := net.JoinHostPort(node.Address, strconv.Itoa(node.Port))
+	log.WithFields(log.Fields{
+		"total":        len(nodes),
+		"index_chosen": randomInt,
+		"address":      address,
+	}).Info("randomly chose node")
 
 	clientConn, err := grpc.Dial(address, grpc.WithInsecure())
 	if err != nil {

@@ -59,10 +59,10 @@ func NewDiscovery() (*Discovery, error) {
 
 // GetLocalServices is used to get all the services managed by the local agent
 func (d *Discovery) GetLocalServices() ([]*Service, error) {
+	log.Debug("-> discovery.GetLocalServices")
 	start := time.Now()
 	usageCounter.WithLabelValues("GetLocalServices").Inc()
 
-	log.Info("GetLocalServices")
 	agentServices, err := d.client.Agent().Services()
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func (d *Discovery) GetLocalServices() ([]*Service, error) {
 			"name":    service.Name,
 			"address": service.Node.Address,
 			"port":    service.Node.Port,
-		}).Info("GetLocalServices found service")
+		}).Debug("GetLocalServices found service")
 
 		services = append(services, &service)
 	}
@@ -88,15 +88,16 @@ func (d *Discovery) GetLocalServices() ([]*Service, error) {
 	elapsed := float64(time.Since(start)) / float64(time.Microsecond)
 	responseTimeSummary.WithLabelValues("GetLocalServices").Observe(elapsed)
 
+	log.WithField("elapsed", elapsed).Debug("<- discovery.GetLocalServices")
 	return services, nil
 }
 
 // GetService is used to get all instances of a service
 func (d *Discovery) GetService(name string) ([]*Node, error) {
+	log.WithField("name", name).Debug("-> discovery.GetService")
 	start := time.Now()
 	usageCounter.WithLabelValues("GetService").Inc()
 
-	log.WithField("name", name).Info("GetService")
 	serviceEntries, _, err := d.client.Health().Service(name, "", true, nil)
 	if err != nil {
 		return nil, err
@@ -111,7 +112,7 @@ func (d *Discovery) GetService(name string) ([]*Node, error) {
 			"name":    serviceEntry.Service.ID,
 			"address": node.Address,
 			"port":    node.Port,
-		}).Info("GetService found node")
+		}).Debug("GetService found node")
 
 		nodes[index] = &node
 	}
@@ -119,18 +120,19 @@ func (d *Discovery) GetService(name string) ([]*Node, error) {
 	elapsed := float64(time.Since(start)) / float64(time.Microsecond)
 	responseTimeSummary.WithLabelValues("GetService").Observe(elapsed)
 
+	log.WithField("elapsed", elapsed).Debug("<- discovery.GetService")
 	return nodes, nil
 }
 
 // RegisterService is used to register a service with discovery service
 func (d *Discovery) RegisterService(name string, port int) error {
+	log.WithField("name", name).WithField("port", port).Debug("-> discovery.RegisterService")
 	start := time.Now()
 	usageCounter.WithLabelValues("RegisterService").Inc()
 
 	var agentServiceRegistration consulapi.AgentServiceRegistration
 	agentServiceRegistration.Name = name
 	agentServiceRegistration.Port = port
-	log.WithField("name", name).Info("RegisterService")
 	err := d.client.Agent().ServiceRegister(&agentServiceRegistration)
 	if err != nil {
 		return err
@@ -139,15 +141,16 @@ func (d *Discovery) RegisterService(name string, port int) error {
 	elapsed := float64(time.Since(start)) / float64(time.Microsecond)
 	responseTimeSummary.WithLabelValues("RegisterService").Observe(elapsed)
 
+	log.WithField("elapsed", elapsed).Debug("<- discovery.RegisterService")
 	return nil
 }
 
 // DeregisterService is used to deregister a service with discovery service
 func (d *Discovery) DeregisterService(name string) error {
+	log.WithField("name", name).Debug("-> discovery.DeregisterService")
 	start := time.Now()
 	usageCounter.WithLabelValues("DeregisterService").Inc()
 
-	log.WithField("name", name).Info("DeregisterService")
 	err := d.client.Agent().ServiceDeregister(name)
 	if err != nil {
 		return err
@@ -156,6 +159,7 @@ func (d *Discovery) DeregisterService(name string) error {
 	elapsed := float64(time.Since(start)) / float64(time.Microsecond)
 	responseTimeSummary.WithLabelValues("DeregisterService").Observe(elapsed)
 
+	log.WithField("elapsed", elapsed).Debug("<- discovery.DeregisterService")
 	return nil
 }
 

@@ -12,13 +12,14 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
 	"net/http"
+	// registers pprof http handlers
 	_ "net/http/pprof"
 )
 
 // Server provides an RPC server that registers itself with discovery and uses HTTP/2 transport
 type Server struct {
-	name       string
-	grpcServer *grpc.Server
+	name     string
+	listener net.Listener
 }
 
 // Serve will register with discovery and wait for queries
@@ -35,21 +36,16 @@ func (s *Server) Serve(name string, registrationFunc func(*grpc.Server)) error {
 		port = randomPort()
 	}
 
-	listener, err := net.Listen("tcp", laddr(*port))
+	s.listener, err = net.Listen("tcp", laddr(*port))
 	if err != nil {
 		log.WithField("port", port).WithField("error", err).Fatal("failed to listen")
 		return err
 	}
 
+	grpcServer := grpc.NewServer()
 	grpc.EnableTracing = true
-	http.Handle("/metrics", prometheus.Handler())
-	err = http.Serve(listener, nil)
-	if err != nil {
-		log.WithField("error", err).Error("failed to serve http")
-		return err
-	}
-
-	registrationFunc(s.grpcServer)
+	registrationFunc(grpcServer)
+	go grpcServer.Serve(s.listener)
 
 	err = registerWithDiscovery(name, *port)
 	if err != nil {
@@ -57,9 +53,10 @@ func (s *Server) Serve(name string, registrationFunc func(*grpc.Server)) error {
 		return err
 	}
 
-	err = s.grpcServer.Serve(listener)
+	http.Handle("/metrics", prometheus.Handler())
+	err = http.Serve(s.listener, nil)
 	if err != nil {
-		log.WithField("error", err).Errorln("failed to serve grpc")
+		log.WithField("error", err).Error("failed to serve http")
 		return err
 	}
 
@@ -68,7 +65,13 @@ func (s *Server) Serve(name string, registrationFunc func(*grpc.Server)) error {
 
 // Stop will end serving and remove itself from discovery
 func (s *Server) Stop() error {
-	err := deregisterWithDiscovery(s.name)
+	err := s.listener.Close()
+	if err != nil {
+		log.WithField("error", err).Error("failed to stop listener")
+		return err
+	}
+
+	err = deregisterWithDiscovery(s.name)
 	if err != nil {
 		log.WithField("error", err).Error("failed to deregister with discovery")
 		return err
@@ -86,7 +89,7 @@ func findExistingPort(name string) (*int, error) {
 
 	for _, service := range services {
 		if strings.EqualFold(service.Name, name) {
-			log.WithField("port", service.Node.Port).Info("found existing port")
+			log.WithField("port", service.Node.Port).Debug("found existing port")
 			return &service.Node.Port, nil
 		}
 	}
@@ -97,7 +100,7 @@ func findExistingPort(name string) (*int, error) {
 func randomPort() *int {
 	rand.Seed(time.Now().UTC().UnixNano())
 	port := rand.Intn(1000) + 50000
-	log.WithField("port", port).Infoln("Chose random port")
+	log.WithField("port", port).Debug("Chose random port")
 	return &port
 }
 
@@ -116,6 +119,8 @@ func registerWithDiscovery(name string, port int) error {
 		log.Fatalf("failed to register with discovery service: %v", err)
 		return err
 	}
+
+	log.WithField("name", name).WithField("port", port).Info("registered with discovery service")
 
 	return nil
 }

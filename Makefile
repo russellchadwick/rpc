@@ -20,4 +20,4 @@ test:
 
 .PHONY: check
 check:
-	gometalinter $(PKG) --concurrency=2 --deadline=60s
+	gometalinter $(PKG) --concurrency=1 --deadline=5m
