@@ -6,6 +6,9 @@ import (
 	log "github.com/Sirupsen/logrus"
 	consulapi "github.com/hashicorp/consul/api"
 	"github.com/prometheus/client_golang/prometheus"
+	"math/rand"
+	"net"
+	"strconv"
 )
 
 var (
@@ -122,6 +125,34 @@ func (d *Discovery) GetService(name string) ([]*Node, error) {
 
 	log.WithField("elapsed", elapsed).Debug("<- discovery.GetService")
 	return nodes, nil
+}
+
+func (d *Discovery) GetRandomServiceAddress(name string) (*string, error) {
+	log.WithField("name", name).Debug("-> discovery.GetRandomServiceNode")
+	start := time.Now()
+	usageCounter.WithLabelValues("GetRandomServiceNode").Inc()
+
+	nodes, err := d.GetService(name)
+	if err != nil {
+		return nil, err
+	}
+
+	randomInt := rand.Intn(len(nodes))
+	node := nodes[randomInt]
+	log.WithFields(log.Fields{
+		"total":        len(nodes),
+		"index_chosen": randomInt,
+		"address":      node.Address,
+		"port": 	node.Port,
+	}).Info("randomly chose node")
+
+	address := net.JoinHostPort(node.Address, strconv.Itoa(node.Port))
+
+	elapsed := float64(time.Since(start)) / float64(time.Microsecond)
+	responseTimeSummary.WithLabelValues("GetRandomServiceNode").Observe(elapsed)
+
+	log.WithField("elapsed", elapsed).Debug("<- discovery.GetRandomServiceNode")
+	return &address, nil
 }
 
 // RegisterService is used to register a service with discovery service
